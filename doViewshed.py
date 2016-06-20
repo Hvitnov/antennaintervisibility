@@ -64,10 +64,8 @@ def sum_by_group(values, groups):
     values[1:] = values[1:] - values[:-1]
     return values, groups
 
-def error_matrix(radius, size_factor=1):
-
-    
-    
+def error_matrix(radius, timeMeasurements, size_factor=1):
+    timeMeasurements['6ca - ErrorMatrix'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     radius_large =  radius + radius * (size_factor-1)  #if double else 0
                                                 
     # SMANJI JEDNU DIMENZIJU
@@ -116,14 +114,15 @@ def error_matrix(radius, size_factor=1):
                 min_err[yx]=[err,j,i]
    
         j+=1
-    
 
+    timeMeasurements['6cb - ErrorMatrix'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     #check-out minimum errors
     for key in min_err:
         ix=min_err[key][1:3]
         er = min_err[key][0]         
         mx_index[ix[0], ix[1]][3]= 1
 
+    timeMeasurements['6cc - ErrorMatrix'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     return mx_index
     
    
@@ -132,15 +131,12 @@ def error_matrix(radius, size_factor=1):
 
 
 def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
-              output_options,
-              Target_layer=0, search_top_obs=0, search_top_target=0,
-              z_obs_field=0, z_target_field=0,
-              curvature=0, refraction=0): #for visib index !!
+              output_options, timeMeasurements,
+              Target_layer=0, z_obs_field=0, z_target_field=0): #for visib index !!
 # ########################################################
 #    output_options[0]= "Fast"
     fast = False #dodatak !
 ##########################################################
-        
     def search_top_z (pt_x, pt_y, search_top): #shoud be a separate loop for all points ?
 
         # global variable      
@@ -315,8 +311,7 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
     
 # -------------- MAIN ----------------------------
 
-    start = time.clock(); start_etape=start
-    test_rpt= "Start: " + str(start)
+    timeMeasurements['4 - startViewshedTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
     #####################################
     # Prepare  progress Bar
@@ -347,28 +342,9 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
 
     RasterPath= str(QgsMapLayerRegistry.instance().mapLayer(Raster_layer).dataProvider().dataSourceUri())
     # TO BE ADDED TO THE DIALOG DIRECTLY (??)
-    if curvature:
-        # we need ellipsiod for curvature (and crs for output)
-        R_layer=QgsMapLayerRegistry.instance().mapLayer(Raster_layer)
-        raster_crs = R_layer.crs().toWkt() #messy.. have to parse textual description...
-        inx =raster_crs.find("SPHEROID") #(...)spheroid["name",semi_major, minor, etc...]
-        inx2 = raster_crs.find(",", inx) +1
-        inx3 = raster_crs.find(",", inx2 )
-        try:
-            semi_major= float(raster_crs[inx2:inx3])
-            if not 6000000 < semi_major < 7000000 : semi_major=6378137#WGS 84
-        except: semi_major=6378137  
 
-        inx4 = raster_crs.find(",", inx3 +1 )
-        try:
-            flattening =  float(raster_crs[inx3 +1:inx4-1])
-            if not 296 <flattening < 301 : flattening= 298.257223563#WGS 84
-        except: flattening= 298.257223563
-        
-        semi_minor=  semi_major - semi_major* (1/flattening)
-        # a compromise for 45 deg latitude, ArcGis seems to have a fixed earth diameter?
-        Diameter = semi_major + semi_minor 
-        
+
+    timeMeasurements['5 - preGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     gdal_raster=gdal.Open(RasterPath)
     gt=gdal_raster.GetGeoTransform()#daje podatke o rasteru (metadata)
     projection= gdal_raster.GetProjection()
@@ -393,9 +369,7 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
     #projection = gdal_raster.GetProjection() #not good ? better to use crs from the project (may override the original)
  #   rb=gdal_raster.GetRasterBand(1)#treba li to?
 
-    #progress report - for testing only
-    test_rpt += "\n GDAL functions : " + str (time.clock()- start_etape)
-    start_etape=time.clock()
+    timeMeasurements['6 - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
     Obs_layer=QgsMapLayerRegistry.instance().mapLayer(Obs_points_layer)
     if Obs_layer.isValid():
@@ -403,6 +377,7 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
         obs_has_ID = bool( Obs_layer.fieldNameIndex ("ID") + 1)
     else: return # abandon function       
 
+    timeMeasurements['6a - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     #initialise target points and create spatial index for speed
     if Target_layer:
         
@@ -416,7 +391,7 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
                 targ_index.insertFeature(f)
                 
         else: return # abandon function
-    
+    timeMeasurements['6b - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     ################################################
     # precalculate distance matrix, errors etc 
     radius_pix = int(radius/pix)
@@ -430,48 +405,51 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
 
     mx_dist = numpy.sqrt(temp_x[:,None] + temp_y[None,:])
     mask_circ = mx_dist [:] > radius  #it's real (metric) radius
-     
-    if curvature:
-        mx_curv = (temp_x[:,None] + temp_y[None,:]) / Diameter
+    timeMeasurements['6c - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-    
-    if output_options[1] == "cumulative":
-        matrix_final = numpy.zeros ( (gdal_raster.RasterYSize, gdal_raster.RasterXSize) )
-    #else:   mx_vis[:] = numpy.nan # set to nan so that it's nicer on screen ...
-    
-    ################index matrix
-    t= error_matrix(radius_pix, not fast) #fast - single our double rim (double rim = True, so not fast)
+    timeMeasurements['6d - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-    mx_err = t[:,:, 2]
-    mx_err_dir = numpy.where(mx_err > 0, 1, -1); mx_err_dir[mx_err == 0]=0 #should use some multiple criteria in where... 
-    mask = t[: ,: , 3]==1 #lowest error - for transfering data
+    if output_options[0] != "Intervisibility":
+        ################index matrix
+        # t= error_matrix(radius_pix, timeMeasurements, not fast) #fast - single our double rim (double rim = True, so not fast)
 
-    #take the best pixels  
-    #cannot simply use indices as pairs [[x,y], [...]]- numpy thing...
-    #cannot use mx : has a lot of duplicate indices
+        timeMeasurements['6e - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+        # mx_err = t[:,:, 2]
+        # mx_err_dir = numpy.where(mx_err > 0, 1, -1); mx_err_dir[mx_err == 0]=0 #should use some multiple criteria in where...
+        # mask = t[: ,: , 3]==1 #lowest error - for transfering data
 
-    # precalculating everything - ugly, but faster
-    x0=y0=radius_pix 
-    
-    mx_x = t[:, : , 1].astype(int)#x and y are swapped - it's a mess...
-    mx_y = t[: ,:, 0].astype(int)
-    mx_y_err = mx_y + mx_err_dir
+        timeMeasurements['6f - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+        #take the best pixels
+        #cannot simply use indices as pairs [[x,y], [...]]- numpy thing...
+        #cannot use mx : has a lot of duplicate indices
 
-    mx_x_rev = numpy.subtract ( t[:,:,1], (t[:,:,1]-x0) *2 , dtype=float)
-    mx_y_rev = numpy.subtract ( t[:,:,0], (t[:,:,0]- y0) *2, dtype=float)
-    mx_y_err_rev = mx_y_rev + mx_err_dir *-1 #switch direction of error!
+        # precalculating everything - ugly, but faster
+        x0=y0=radius_pix
 
-    #steep = x y swap (error is only on y so now it's only on x) 
-    mx_x_steep = x0 + (mx_y - y0)
-    mx_y_steep = y0 + (mx_x - x0)
-    mx_x_err_steep = x0 + (mx_y_err - y0)
+        # mx_x = t[:, : , 1].astype(int)#x and y are swapped - it's a mess...
+        # mx_y = t[: ,:, 0].astype(int)
+        # mx_y_err = mx_y + mx_err_dir
+        timeMeasurements['6g - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-    mx_x_rev_steep = x0 + (mx_y_rev - y0)
-    mx_y_rev_steep = y0 + (mx_x_rev - x0)
-    mx_x_err_rev_steep = x0 + (mx_y_err_rev - y0)
+        # mx_x_rev = numpy.subtract ( t[:,:,1], (t[:,:,1]-x0) *2 , dtype=float)
+        # mx_y_rev = numpy.subtract ( t[:,:,0], (t[:,:,0]- y0) *2, dtype=float)
+        # mx_y_err_rev = mx_y_rev + mx_err_dir *-1 #switch direction of error!
+
+
+        timeMeasurements['6h - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+        #steep = x y swap (error is only on y so now it's only on x)
+        # mx_x_steep = x0 + (mx_y - y0)
+        # mx_y_steep = y0 + (mx_x - x0)
+        # mx_x_err_steep = x0 + (mx_y_err - y0)
+
+
+        timeMeasurements['6i - postGDALTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+        # mx_x_rev_steep = x0 + (mx_y_rev - y0)
+        # mx_y_rev_steep = y0 + (mx_x_rev - x0)
+        # mx_x_err_rev_steep = x0 + (mx_y_err_rev - y0)
 
     # ----------------- POINT LOOP -------------------------
-    
+    timeMeasurements['7 - prePointLoopTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     for feat in Obs_layer.getFeatures():
         targets=[]
 
@@ -486,14 +464,10 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
             x = int((x_geog - raster_x_min) / pix) # not float !
             y = int((raster_y_max - y_geog) / pix) #reversed !
         else: continue
-        
-        #move everything..
-        if search_top_obs:
-            x,y = search_top_z (x, y, search_top_obs)
             
-           # find correct coordinates of new points - needed for intervisibilty only...
-            if output_options[0]== "Intervisibility":
-                x_geog, y_geog= raster_x_min  + x *pix + pix/2 , raster_y_max - y *pix - pix/2
+        # find correct coordinates of new points - needed for intervisibilty only...
+        if output_options[0]== "Intervisibility":
+            x_geog, y_geog= raster_x_min  + x *pix + pix/2 , raster_y_max - y *pix - pix/2
         else: z = 0 #reset !!
 
         # ----------  extraction of a chunk of data ---------------
@@ -531,8 +505,6 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
         else:	    z = data [radius_pix,radius_pix] + z_obs  
         
         data -= z # level all according to observer
-        
-        if curvature: data -= mx_curv * (1 - refraction) # SHOULD BE FIXED !!
 
         # ------  create an array of additional angles (parallel to existing surface) ----------
         if z_target > 0 :
@@ -562,14 +534,6 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
                     x2 = int((x2_geog - raster_x_min) / pix)  #round vraca float!!
                     y2 = int((raster_y_max - y2_geog) / pix)  #pazi: obratno!!
                 else: continue
-
-                if search_top_target: 
-                    x2,y2 = search_top_z (x2,y2,search_top_target)
-                    # target point search = 1) on local data array, 2) inside the radius of search
-                    # normally the search is on entire data array and the perimeter is then designed around the point
-
-                    x2_geog= raster_x_min  + x2  * pix + pix/2
-                    y2_geog=   raster_y_max - y2 *pix - pix/2
 
                 #skipping 1
                 if x2==x and y2==y : continue
@@ -696,8 +660,7 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
     ##                        #vv= v2[orig_sort]
 
                             
-                                                          
-                            # TODO : without loop
+
     ##                      #reorder everything so that indices get masked properly
                             # doesn't work at all
 ##                            if 1==1:
@@ -799,6 +762,8 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
                     
         ######################################
         #Update the progress bar: point loop
+
+        timeMeasurements['8 - postPointLoopTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
         
         progress += 1
         progress_bar.setValue(progress) #(progress / feature_count) * 100 = percentage - losing time :)	
@@ -819,10 +784,8 @@ def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
 
         else : QMessageBox.information(None, "Error writing file !", str(output + '_intervisibility cannot be saved'))
 
-    
+    timeMeasurements['9 - postWriteLines'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
     matrix_final = None; data = None; connections_list=None; v=None; vis=None
-    test_rpt += "\n Total time: " + str (time.clock()- start)
-    #QMessageBox.information(None, "Timing report:", str(test_rpt))
     
     iface.messageBar().clearWidgets()  
 

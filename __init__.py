@@ -48,6 +48,6 @@ def email():
     return "n/a"
 
 def classFactory(iface):
-    # load AntennaIntervisibility class from file AntennaIntervisibility
+    # load AntennaIntervisibility class from file antennaintervisibility
     from antennaintervisibility import AntennaIntervisibility
     return AntennaIntervisibility(iface)

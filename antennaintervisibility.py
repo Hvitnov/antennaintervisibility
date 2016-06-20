@@ -28,101 +28,94 @@ from qgis.core import *
 import resources_rc
 # Import the code for the dialog
 from antennaintervisibilitydialog import AntennaIntervisibilityDialog
-
 from doViewshed import *
-from osgeo import osr, gdal
 import os
-#import shutil# to copy files
-import numpy 
-#from scipy import sparse Nema ga !!
-from math import sqrt, degrees, atan2
-from operator import itemgetter #ovo je za sortiranje liste NE TREBA!!!
 
-
-class AntennaIntervisibility:
-
+    
+class AntennaIntervisibility(QObject):
     def __init__(self, iface):
+        super(AntennaIntervisibility, self).__init__()
         # Save reference to the QGIS interface
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = QFileInfo(QgsApplication.qgisUserDbFilePath()).path() + "/python/plugins/antennaintervisibility"
         # initialize locale
-        localePath = ""
-    ## REMOVED .toString()
-        locale = str(QSettings().value("locale/userLocale"))[0:2] #to je za jezik
-        
-        if QFileInfo(self.plugin_dir).exists():
-            localePath = self.plugin_dir + "/i18n/AntennaIntervisibility_" + locale + ".qm"
+        locale = QSettings().value('locale/userLocale')[0:2]
+        locale_path = os.path.join(
+            self.plugin_dir,
+            'i18n',
+            'AntennaIntervisibility_{}.qm'.format(locale))
 
-        if QFileInfo(localePath).exists():
+        if os.path.exists(locale_path):
             self.translator = QTranslator()
-            self.translator.load(localePath)
+            self.translator.load(locale_path)
 
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
         # Create the dialog (after translation) and keep reference
+
+        # Create the dialog (after translation) and keep reference
         self.dlg = AntennaIntervisibilityDialog()
+        self.timeMeasurements = {}
 
     def initGui(self):
         # Create action that will start plugin configuration
         # icon in the plugin reloader : from resouces.qrc file (compiled)
         self.action = QAction(
             QIcon(":/plugins/AntennaIntervisibility/icon.png"),
-            u"Viewshed analysis", self.iface.mainWindow())
+            u"Antenna Intervisibility", self.iface.mainWindow())
+
         # connect the action to the run method
-        QObject.connect(self.action, SIGNAL("triggered()"), self.run)
-        
+        self.action.triggered.connect(self.run)
 
         # Add toolbar button and menu item
         self.iface.addToolBarIcon(self.action)
-        self.iface.addPluginToMenu(u"&Viewshed Analysis", self.action)
+        self.iface.addPluginToMenu(u"&Antenna Intervisibility", self.action)
 
         # Fire refreshing of combo-boxes containing lists of table columns, after a new layer has been selected
-        
-        QObject.connect(self.dlg.ui.cmbPoints, SIGNAL("currentIndexChanged(int)"),self.load_cmbObsField)# ne radi sa zadanim parametrom (source)
-        QObject.connect(self.dlg.ui.cmbPointsTarget, SIGNAL("currentIndexChanged(int)"),self.load_cmbTargetField)# ne radi sa zadanim parametrom (source)
-
+        self.dlg.ui.cmbPoints.currentIndexChanged.connect(self.populate_height_field_comboboxes)
+        self.dlg.ui.cmbPointsTarget.currentIndexChanged.connect(self.populate_height_field_comboboxes)
 
     def unload(self):
         # Remove the plugin menu item and icon
-        self.iface.removePluginMenu(u"&Viewshed Analysis", self.action)
+        self.iface.removePluginMenu(u"&Antenna Intervisibility", self.action)
         self.iface.removeToolBarIcon(self.action)
-        
-    #This is just a clumsy workaround for the problem of mulitple arguments in the Qt signal-slot scheme
-    def load_cmbObsField(self,cmb_index): self.reload_dependent_combos(cmb_index,'cmbObsField')
-    def load_cmbTargetField(self,cmb_index): self.reload_dependent_combos(cmb_index-1,'cmbTargetField')
-                                                                           #-1 because the first one is empty...          
-                   
-    def reload_dependent_combos(self,cmb_index,cmb_name):
 
-        if cmb_name=='cmbObsField':
-            cmb_obj=self.dlg.ui.cmbObsField
-            l=self.dlg.ui.cmbPoints.itemData(cmb_index)   #(self.dlg.ui.cmbPoints.currentIndex())
+    def populate_height_field_comboboxes(self):
+        layer_combobox = self.sender().objectName()
+        combobox_index = self.sender().currentIndex()
+        layer = str(self.sender().itemData(combobox_index))
+
+        if layer_combobox == 'cmbPoints':
+            fields_combobox = self.dlg.ui.cmbObsField
         else:
-            cmb_obj=self.dlg.ui.cmbTargetField
-            l=self.dlg.ui.cmbPoints.itemData(cmb_index)   #(self.dlg.ui.cmbPoints.currentIndex())
-       
-        cmb_obj.clear()
-        cmb_obj.addItem('',0)
+            fields_combobox = self.dlg.ui.cmbTargetField
+        fields_combobox.clear()
+        fields_combobox.addItem('', 0)
+
+        map_layer = QgsMapLayerRegistry.instance().mapLayer(layer)
+
+        if map_layer is None: return
         
-        ly_name=str(l)
-        ly = QgsMapLayerRegistry.instance().mapLayer(ly_name)
-        
-        #QMessageBox.information(self.iface.mainWindow(), "prvi", str(ly_name))
-        if ly is None: return
-        
-        provider = ly.dataProvider()
-        columns = provider.fields() # a dictionary
-        j=0
-        for fld in columns:
-            #QMessageBox.information(self.iface.mainWindow(), "drugi", str(i.name))
-            j+=1
-            cmb_obj.addItem(str(fld.name()),str(fld.name())) #for QGIS 2.0 we need column names, not index (j)
+        provider = map_layer.dataProvider()
+        fields = provider.fields() # a dictionary
+        for field in fields:
+            fields_combobox.addItem(str(field.name()),str(field.name()))
+
+    def printMsg(self, msg):
+        QMessageBox.information(self.iface.mainWindow(), "Debug", msg)
+
+    def debugHere(self):
+        import pdb
+        # These lines allow you to set a breakpoint in the app
+        pyqtRemoveInputHook()
+        pdb.set_trace()
+        return
 
 
     def run(self):
- 
+        self.timeMeasurements['1 - startTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
         #UBACIVANJE RASTERA I TOCAKA (mora biti ovdje ili se barem pozvati odavde)
         myLayers = []
@@ -151,48 +144,40 @@ class AntennaIntervisibility:
         # Run the dialog event loop
         result = self.dlg.exec_()
 
-        l = self.dlg.ui.cmbPoints.itemData(self.dlg.ui.cmbPoints.currentIndex())
-        ly_name = str(l)
-      #  QMessageBox.information(self.iface.mainWindow(), "drugi", str(ly_name))
-
         # See if OK was pressed
         
         if result == 1:
-            outPath = AntennaIntervisibilityDialog.returnOutputFile(self.dlg)
-            ly_obs = AntennaIntervisibilityDialog.returnPointLayer(self.dlg)
-            ly_target = AntennaIntervisibilityDialog.returnTargetLayer(self.dlg)
-            ly_dem = AntennaIntervisibilityDialog.returnRasterLayer(self.dlg)
+            self.timeMeasurements['2 - oktime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-            z_obs = AntennaIntervisibilityDialog.returnObserverHeight(self.dlg)
-            z_obs_field = self.dlg.ui.cmbObsField.itemData(
-                self.dlg.ui.cmbObsField.currentIndex())#table columns are indexed 0-n 
+            outPath = AntennaIntervisibilityDialog.get_output_file_path(self.dlg)
+            raster_layer = AntennaIntervisibilityDialog.get_selected_raster_layer(self.dlg)
+            observers_layer = AntennaIntervisibilityDialog.get_selected_observer_layer(self.dlg)
+            targets_layer = AntennaIntervisibilityDialog.get_selected_target_layer(self.dlg)
 
-            z_target = AntennaIntervisibilityDialog.returnTargetHeight(self.dlg)
-            z_target_field =self.dlg.ui.cmbTargetField.itemData(
+            observer_height = AntennaIntervisibilityDialog.get_observer_height_preset(self.dlg)
+            observer_height_field = self.dlg.ui.cmbObsField.itemData(
+                self.dlg.ui.cmbObsField.currentIndex())
+
+            target_height = AntennaIntervisibilityDialog.get_target_height_preset(self.dlg)
+            target_height_field =self.dlg.ui.cmbTargetField.itemData(
                 self.dlg.ui.cmbTargetField.currentIndex())       
             
-            Radius = AntennaIntervisibilityDialog.returnRadius(self.dlg)
-
-            search_top_obs = AntennaIntervisibilityDialog.returnSearchTopObserver(self.dlg)
-            search_top_target = AntennaIntervisibilityDialog.returnSearchTopTarget(self.dlg)
+            Radius = AntennaIntervisibilityDialog.get_observer_view_radius(self.dlg)
             
-            output_options = AntennaIntervisibilityDialog.returnOutputOptions(self.dlg)
-                
-            curv=AntennaIntervisibilityDialog.returnCurvature(self.dlg)
-            refraction = curv[1] if curv else 0 
+            output_options = AntennaIntervisibilityDialog.get_algorithm_type(self.dlg)
+
             
             if not output_options [0]:
                 QMessageBox.information(self.iface.mainWindow(), "Error!", str("Select an output option")) 
-                return 
-             #   LOADING CSV
-             # uri = "file:///some/path/file.csv?delimiter=%s&crs=epsg:4723&wktField=%s" \
-             # % (";", "shape")
+                return
+            self.timeMeasurements['3 - preViewshedTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-            out_raster = Viewshed(ly_obs, ly_dem, z_obs, z_target, Radius,outPath,
-                                  output_options,
-                                  ly_target, search_top_obs, search_top_target,
-                                  z_obs_field, z_target_field, curv, refraction)
-            
+            out_raster = Viewshed(observers_layer, raster_layer, observer_height, target_height, Radius,outPath,
+                                  output_options, self.timeMeasurements,
+                                  targets_layer, observer_height_field, target_height_field)
+
+            self.timeMeasurements['4 - preRasterTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+
             for r in out_raster:
                 #QMessageBox.information(self.iface.mainWindow(), "debug", str(r))
                 lyName = os.path.splitext(os.path.basename(r))
@@ -236,7 +221,7 @@ class AntennaIntervisibility:
                     #rlayer.setContrastEnhancementAlgorithm(QgsContrastEnhancement.StretchToMinimumMaximum, False)
                     #rlayer.setTransparency(200)
                     #rlayer.setNoDataValue(0.0)
-                    
+                self.debugHere()
                 QgsMapLayerRegistry.instance().addMapLayer(layer)
 
             

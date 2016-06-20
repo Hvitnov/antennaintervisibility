@@ -44,68 +44,46 @@ class AntennaIntervisibilityDialog(QtGui.QDialog):
         self.ui.cmdBrowse.clicked.connect(self.fileOutput)
 ##        self.ui.cmdAbout.clicked.connect(self.OpenPDFfile)
 
-    def returnPointLayer(self):
+    def get_selected_observer_layer(self):
         #ovo mu daje varant sa svim podaccima
         l=self.ui.cmbPoints.itemData(self.ui.cmbPoints.currentIndex())
         return str(l)
     
-    def returnRasterLayer(self):
+    def get_selected_raster_layer(self):
         #ovo mu daje varant sa svim podaccima
         l=self.ui.cmbRaster.itemData(self.ui.cmbRaster.currentIndex())
         return str(l)
     
-    def returnOutputFile(self):
+    def get_output_file_path(self):
         #ovo mu daje varant sa svim podaccima
         l=self.ui.txtOutput.toPlainText() #inace text()..
         return str(l)
     
-    def returnTargetLayer(self):
+    def get_selected_target_layer(self):
         k=self.ui.cmbPointsTarget.currentIndex()
         if k>0:
             l=self.ui.cmbPointsTarget.itemData(k)
             return str(l)
         else: return 0
-        
-    
-    def returnObserverHeight(self):
+
+    def get_observer_height_preset(self):
         try: l = float(self.ui.txtObserver.text())
         except: l=0
         return l
 
-    def returnTargetHeight(self):
+    def get_target_height_preset(self):
         try: l = float(self.ui.txtTarget.text())
         except: l = 0
         return l
     
-    def returnRadius(self):
+    def get_observer_view_radius(self):
         try: l = float(self.ui.txtRadius.text())
         except: l = 0
         return l
     
-    def returnSearchTopObserver(self):
-        try: l = int(self.ui.txtAdaptRadiusObs.text())
-        except: l=0
-        return l
-    
-    def returnSearchTopTarget(self):
-        try: l = int(self.ui.txtAdaptRadiusTarget.text())
-        except: l=0
-        return l
-    
-    def returnOutputOptions(self):
-        #the idea is to loop through checkboxes, but how ???
-        opt = [0,0,0]# list to accomodate for sub options (cumulative, horizon min distance etc)
-
-        if self.ui.chkBinary.isChecked(): opt[0] = "Binary"
-        elif self.ui.chkInvisibility.isChecked(): opt[0] = "Invisibility" 
-        elif self.ui.chkHorizon.isChecked():
-            opt [0]= "Horizon"
-  #          try: opt [2]= float(self.ui.txtHorizonDepth.text())
-   #         except: pass #will be 0
-        elif self.ui.chkIntervisibility.isChecked():  opt [0]= "Intervisibility"
-
-        if self.ui.chkCumulative.isChecked(): opt [1]= "cumulative" 
-    
+    def get_algorithm_type(self):
+        opt = [0,0,0]
+        if self.ui.chkIntervisibility.isChecked():  opt [0]= "Intervisibility"
         return opt
 
     def fileOutput(self): #problem je ekstenzija!!!!
@@ -119,23 +97,6 @@ class AntennaIntervisibilityDialog(QtGui.QDialog):
             #fname.write(txtOutput.toPlainText())
             fname.close()
         except: pass
-        
-    def returnCurvature (self): # and refraction
-        if self.ui.chkCurvature.isChecked():
-            try: r=float(self.ui.txtRefraction.text())
-            except: r=0
-            return (True, r)
-        else: return None
-
-    def OpenPDFfile(self):
-        
-        filepath = os.path.dirname(os.path.abspath(__file__)) + "/help/Advanced viewshed analysis.pdf" 
-        if sys.platform.startswith('darwin'):
-            subprocess.call(('open', filepath))
-        elif os.name == 'nt':
-            os.startfile(filepath)
-        elif os.name == 'posix':
-            subprocess.call(('xdg-open', filepath))
 
     def setProgressBar(self, total):
         self.ui.progressBar.setMinimum(1)
