@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/plugins/AntennaIntervisibility" >
+	<file>Fig1_small.png</file>
+        <file>icon.png</file>
+    </qresource>
+</RCC>
