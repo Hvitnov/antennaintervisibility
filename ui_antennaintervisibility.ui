@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>683</height>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>0</x>
      <y>10</y>
      <width>431</width>
-     <height>671</height>
+     <height>701</height>
     </rect>
    </property>
    <property name="currentIndex">
@@ -35,7 +35,7 @@
        <x>8</x>
        <y>10</y>
        <width>411</width>
-       <height>618</height>
+       <height>641</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -500,10 +500,10 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Intervisibility - Zoran c version</string>
+               <string>Zoran c version</string>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -516,7 +516,23 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Intervisibility - Something else</string>
+               <string>Naive Bresenham</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="chkIntervisibility_3">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Parallelized Bresenham</string>
               </property>
               <property name="checked">
                <bool>false</bool>

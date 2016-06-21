@@ -84,6 +84,8 @@ class AntennaIntervisibilityDialog(QtGui.QDialog):
     def get_algorithm_type(self):
         opt = [0,0,0]
         if self.ui.chkIntervisibility.isChecked():  opt [0]= "Intervisibility"
+        if self.ui.chkIntervisibility_2.isChecked():  opt[0] = "Intervisibility 2"
+        if self.ui.chkIntervisibility_3.isChecked():  opt[0] = "Intervisibility 3"
         return opt
 
     def fileOutput(self): #problem je ekstenzija!!!!

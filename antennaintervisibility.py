@@ -54,8 +54,6 @@ class AntennaIntervisibility(QObject):
                 QCoreApplication.installTranslator(self.translator)
 
         # Create the dialog (after translation) and keep reference
-
-        # Create the dialog (after translation) and keep reference
         self.dlg = AntennaIntervisibilityDialog()
         self.timeMeasurements = {}
 
@@ -115,7 +113,6 @@ class AntennaIntervisibility(QObject):
 
 
     def run(self):
-        self.timeMeasurements['1 - startTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
         #UBACIVANJE RASTERA I TOCAKA (mora biti ovdje ili se barem pozvati odavde)
         myLayers = []
@@ -128,118 +125,142 @@ class AntennaIntervisibility(QObject):
         for i in range(len(iface.mapCanvas().layers())):
             myLayer = iface.mapCanvas().layer(i)
             if myLayer.type() == myLayer.RasterLayer:
-
-                #provjera da li je DEM 1 band .... !!!
                 self.dlg.ui.cmbRaster.addItem(myLayer.name(),myLayer.id())
 
             elif myLayer.geometryType() == QGis.Point: 
                 self.dlg.ui.cmbPoints.addItem(myLayer.name(),myLayer.id())
                 self.dlg.ui.cmbPointsTarget.addItem(myLayer.name(),myLayer.id())
 
-        #allAttrs = layer.pendingAllAttributesList()
-       
-                
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
         result = self.dlg.exec_()
 
         # See if OK was pressed
-        
         if result == 1:
-            self.timeMeasurements['2 - oktime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+            self.timeMeasurements['1 - oktime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-            outPath = AntennaIntervisibilityDialog.get_output_file_path(self.dlg)
-            raster_layer = AntennaIntervisibilityDialog.get_selected_raster_layer(self.dlg)
-            observers_layer = AntennaIntervisibilityDialog.get_selected_observer_layer(self.dlg)
-            targets_layer = AntennaIntervisibilityDialog.get_selected_target_layer(self.dlg)
+            outpath = AntennaIntervisibilityDialog.get_output_file_path(self.dlg)
+            raster_layer_selection = AntennaIntervisibilityDialog.get_selected_raster_layer(self.dlg)
+            observers_layer_selection = AntennaIntervisibilityDialog.get_selected_observer_layer(self.dlg)
+            targets_layer_selection = AntennaIntervisibilityDialog.get_selected_target_layer(self.dlg)
 
             observer_height = AntennaIntervisibilityDialog.get_observer_height_preset(self.dlg)
-            observer_height_field = self.dlg.ui.cmbObsField.itemData(
-                self.dlg.ui.cmbObsField.currentIndex())
+            observers_height_field = self.dlg.ui.cmbObsField.itemData(self.dlg.ui.cmbObsField.currentIndex())
 
             target_height = AntennaIntervisibilityDialog.get_target_height_preset(self.dlg)
-            target_height_field =self.dlg.ui.cmbTargetField.itemData(
-                self.dlg.ui.cmbTargetField.currentIndex())       
+            targets_height_field = self.dlg.ui.cmbTargetField.itemData(self.dlg.ui.cmbTargetField.currentIndex())
             
-            Radius = AntennaIntervisibilityDialog.get_observer_view_radius(self.dlg)
+            observer_radius = AntennaIntervisibilityDialog.get_observer_view_radius(self.dlg)
             
             output_options = AntennaIntervisibilityDialog.get_algorithm_type(self.dlg)
 
-            
+            raster_map_layer = QgsMapLayerRegistry.instance().mapLayer(raster_layer_selection)
+            raster_path = raster_map_layer.dataProvider().dataSourceUri()
+            raster = gdal.Open(raster_path)
+
+            observers_map_layer = QgsMapLayerRegistry.instance().mapLayer(observers_layer_selection)
+            observers_path = observers_map_layer.dataProvider().dataSourceUri()
+            targets_map_layer = QgsMapLayerRegistry.instance().mapLayer(targets_layer_selection)
+            targets_path = targets_map_layer.dataProvider().dataSourceUri()
+            if '|' in observers_path:
+                path_end = observers_path.find('|')
+                observers_path = observers_path[:path_end]
+            if '|' in targets_path:
+                path_end = targets_path.find('|')
+                targets_path = targets_path[:path_end]
+
+            observers_ogr = ogr.Open(observers_path)
+            observers = observers_ogr.GetLayer()
+            targets_ogr = ogr.Open(targets_path)
+            targets = targets_ogr.GetLayer()
+
+
+
             if not output_options [0]:
                 QMessageBox.information(self.iface.mainWindow(), "Error!", str("Select an output option")) 
                 return
-            self.timeMeasurements['3 - preViewshedTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
 
-            out_raster = Viewshed(observers_layer, raster_layer, observer_height, target_height, Radius,outPath,
-                                  output_options, self.timeMeasurements,
-                                  targets_layer, observer_height_field, target_height_field)
+            if self.dlg.ui.chkIntervisibility.isChecked():
+                out_raster = Viewshed(observers_layer_selection, raster_layer_selection, observer_height, target_height, observer_radius,outpath,
+                                  output_options,
+                                  targets_layer_selection, observers_height_field, targets_height_field)
 
-            self.timeMeasurements['4 - preRasterTime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+                for r in out_raster:
+                    lyName = os.path.splitext(os.path.basename(r))
+                    layer = QgsRasterLayer(r, lyName[0])
 
-            for r in out_raster:
-                #QMessageBox.information(self.iface.mainWindow(), "debug", str(r))
-                lyName = os.path.splitext(os.path.basename(r))
-                layer = QgsRasterLayer(r, lyName[0])
-                #if error -> it's shapefile, skip rendering...
-                if not layer.isValid():
-                    layer= QgsVectorLayer(r,lyName[0],"ogr")
-                    
-                else:
-##                    #rlayer.setColorShadingAlgorithm(QgsRasterLayer.UndefinedShader)
-##
-##                    #from linfinity.com
-##                    extentMin, extentMax = layer.computeMinimumMaximumFromLastExtent( band )
-##
-##                    # For greyscale layers there is only ever one band
-##                    band = layer.bandNumber( layer.grayBandName() ) # base 1 counting in gdal
-##                    # We don't want to create a lookup table
-##                    generateLookupTableFlag = False
-##                    # set the layer min value for this band
-##                    layer.setMinimumValue( band, extentMin, generateLookupTableFlag )
-##                    # set the layer max value for this band
-##                    layer.setMaximumValue( band, extentMax, generateLookupTableFlag )
-##
-##                    # let the layer know that the min max are user defined
-##                    layer.setUserDefinedGrayMinimumMaximum( True )
-##
-##                    # make sure the layer is redrawn
-##                    layer.triggerRepaint()
+                    if not layer.isValid():
+                        layer = QgsVectorLayer(r, lyName[0], "ogr")
+                    else:
+                        layer.setContrastEnhancement(QgsContrastEnhancement.StretchToMinimumMaximum)
 
-                    #NOT WORKING 
-                    
-##                    x = QgsRasterTransparency.TransparentSingleValuePixel()
-##                    x.pixelValue = 0
-##                    x.transparencyPercent = 100
-##                    layer.setTransparentSingleValuePixelList( [ x ] )
-                    
-                    layer.setContrastEnhancement(QgsContrastEnhancement.StretchToMinimumMaximum)
+                    QgsMapLayerRegistry.instance().addMapLayer(layer)
 
-                    #rlayer.setDrawingStyle(QgsRasterLayer.SingleBandPseudoColor)
-                    #rlayer.setColorShadingAlgorithm(QgsRasterLayer.PseudoColorShader)
-                    #rlayer.setContrastEnhancementAlgorithm(QgsContrastEnhancement.StretchToMinimumMaximum, False)
-                    #rlayer.setTransparency(200)
-                    #rlayer.setNoDataValue(0.0)
-                self.debugHere()
+
+            elif self.dlg.ui.chkIntervisibility_2.isChecked():
+                bresresult = bresenham_3d_line_of_sight(observers,
+                                                        targets,
+                                                        raster,
+                                                        observers_height_field,
+                                                        targets_height_field,
+                                                        observer_radius)
+
+                # Write line to shapefile
+                shpfile = self.write_lines_layer(outpath, raster_map_layer.crs(), bresresult)
+
+                # add shapefile as QGIS layer
+                path = os.path.abspath(shpfile)
+                basename = os.path.splitext(os.path.basename(shpfile))[0]
+                layer = QgsVectorLayer(path, basename, "ogr")
                 QgsMapLayerRegistry.instance().addMapLayer(layer)
 
-            
-#    adding csv files ... an attempt
-##                    url = QUrl.fromLocalFile(r)
-##                    url.addQueryItem('delimiter',',')
-##                    url.addQueryItem('xField  <-or-> yField','longitude')
-##                    url.addQueryItem('crs','epsg:4723')
-##                    url.addQueryItem('wktField','WKT')
-## -> Problem
-##                    #layer_uri=Qstring.fromAscii(url.toEncoded())
-##                    layer_uri= str(url)
-##                    layer=QgsVectorLayer(r, lyName[0],"delimitedtext")
 
-#                     QMessageBox.information(None, "File created!", str("Please load file manually (as comma delilmited text)."))
+            self.timeMeasurements['2 - endtime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+            self.printMsg(str(self.timeMeasurements))
+            return True
+
+# zoran tb_one_antenna: {'2 - endtime': '20:14:17', '1 - oktime': '20:14:12'}
+# Naive tb_one_antenna: {'2 - endtime': '20:13:03', '1 - oktime': '20:13:00'}
+# smart tb_one_antenna:
+
+# zoran tb: {'2 - endtime': '20:19:28', '1 - oktime': '20:19:06'}
+# Naive tb: {'2 - endtime': '00:51:18', '1 - oktime': '00:51:14'}
+# smart tb:
+
+# zoran samso:
+# Naive samso:
+# smart samso:
 
 
+    def write_lines_layer(self, file_name, coordinate_ref_system, data_list):
+        fields = QgsFields()
 
+        fields.append(QgsField("observ_id", QVariant.String, 'string', 10))
+        fields.append(QgsField("target_id", QVariant.String, 'string', 10))
+        fields.append(QgsField("visible", QVariant.String, 'string', 10))
 
+        writer = QgsVectorFileWriter(file_name + ".shp", "CP1250", fields,
+                                     QGis.WKBLineString, coordinate_ref_system)  # , "ESRI Shapefile"
+        # CP... = encoding
+        if writer.hasError() != QgsVectorFileWriter.NoError:
+            QMessageBox.information(None, "ERROR!", "Cannot write point file - did you select a path?")
+            return 0
 
-            
+        for data in data_list:
+            # create a new feature
+            feat = QgsFeature()
+            feat.setFields(fields)
+            # Write point data
+            start_x, start_y = data['observer_coordinates']
+            end_x, end_y = data['target_coordinates']
+            start_point = QgsPoint(start_x, start_y)
+            end_point = QgsPoint(end_x, end_y)
+            feat.setGeometry(QgsGeometry().fromPolyline([start_point, end_point]))
+            feat['observ_id'] = str(data['observer_id'])
+            feat['target_id'] = str(data['target_id'])
+            feat['visible'] = str(data['visible'])
+            writer.addFeature(feat)
+            del feat
+        del writer
+        return file_name + ".shp"

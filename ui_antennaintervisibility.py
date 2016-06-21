@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_antennaintervisibility.ui'
 #
-# Created: Mon Jun 20 16:20:16 2016
+# Created: Tue Jun 21 15:06:31 2016
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,14 +26,14 @@ except AttributeError:
 class Ui_AntennaIntervisibility(object):
     def setupUi(self, AntennaIntervisibility):
         AntennaIntervisibility.setObjectName(_fromUtf8("AntennaIntervisibility"))
-        AntennaIntervisibility.resize(434, 683)
+        AntennaIntervisibility.resize(434, 720)
         self.tabWidget = QtGui.QTabWidget(AntennaIntervisibility)
-        self.tabWidget.setGeometry(QtCore.QRect(0, 10, 431, 671))
+        self.tabWidget.setGeometry(QtCore.QRect(0, 10, 431, 701))
         self.tabWidget.setObjectName(_fromUtf8("tabWidget"))
         self.General_tab = QtGui.QWidget()
         self.General_tab.setObjectName(_fromUtf8("General_tab"))
         self.layoutWidget = QtGui.QWidget(self.General_tab)
-        self.layoutWidget.setGeometry(QtCore.QRect(8, 10, 411, 618))
+        self.layoutWidget.setGeometry(QtCore.QRect(8, 10, 411, 641))
         self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.layoutWidget)
         self.verticalLayout_3.setMargin(0)
@@ -311,7 +311,7 @@ class Ui_AntennaIntervisibility(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.chkIntervisibility.sizePolicy().hasHeightForWidth())
         self.chkIntervisibility.setSizePolicy(sizePolicy)
-        self.chkIntervisibility.setChecked(True)
+        self.chkIntervisibility.setChecked(False)
         self.chkIntervisibility.setObjectName(_fromUtf8("chkIntervisibility"))
         self.verticalLayout_4.addWidget(self.chkIntervisibility)
         self.chkIntervisibility_2 = QtGui.QRadioButton(self.layoutWidget)
@@ -320,9 +320,18 @@ class Ui_AntennaIntervisibility(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.chkIntervisibility_2.sizePolicy().hasHeightForWidth())
         self.chkIntervisibility_2.setSizePolicy(sizePolicy)
-        self.chkIntervisibility_2.setChecked(False)
+        self.chkIntervisibility_2.setChecked(True)
         self.chkIntervisibility_2.setObjectName(_fromUtf8("chkIntervisibility_2"))
         self.verticalLayout_4.addWidget(self.chkIntervisibility_2)
+        self.chkIntervisibility_3 = QtGui.QRadioButton(self.layoutWidget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.chkIntervisibility_3.sizePolicy().hasHeightForWidth())
+        self.chkIntervisibility_3.setSizePolicy(sizePolicy)
+        self.chkIntervisibility_3.setChecked(False)
+        self.chkIntervisibility_3.setObjectName(_fromUtf8("chkIntervisibility_3"))
+        self.verticalLayout_4.addWidget(self.chkIntervisibility_3)
         self.verticalLayout_6.addLayout(self.verticalLayout_4)
         self.horizontalLayout_14 = QtGui.QHBoxLayout()
         self.horizontalLayout_14.setObjectName(_fromUtf8("horizontalLayout_14"))
@@ -400,8 +409,9 @@ class Ui_AntennaIntervisibility(object):
         self.txtRadius.setText(_translate("AntennaIntervisibility", "2000", None))
         self.checkBox_Fresnel.setText(_translate("AntennaIntervisibility", "Enable Fresnel Zones", None))
         self.DEM_label_6.setText(_translate("AntennaIntervisibility", "Algorithm Type", None))
-        self.chkIntervisibility.setText(_translate("AntennaIntervisibility", "Intervisibility - Zoran c version", None))
-        self.chkIntervisibility_2.setText(_translate("AntennaIntervisibility", "Intervisibility - Something else", None))
+        self.chkIntervisibility.setText(_translate("AntennaIntervisibility", "Zoran c version", None))
+        self.chkIntervisibility_2.setText(_translate("AntennaIntervisibility", "Naive Bresenham", None))
+        self.chkIntervisibility_3.setText(_translate("AntennaIntervisibility", "Parallelized Bresenham", None))
         self.label_13.setText(_translate("AntennaIntervisibility", "Output Type:", None))
         self.OutputTypeSelector.setItemText(0, _translate("AntennaIntervisibility", "Highest Points in Polygon", None))
         self.OutputTypeSelector.setItemText(1, _translate("AntennaIntervisibility", "Lowest Points in Polygon", None))
