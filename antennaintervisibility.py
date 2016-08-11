@@ -1,23 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
- AntennaIntervisibility
-                                 A QGIS plugin
- ------description-------
-                              -------------------
-        begin                : 2013-05-22
-        copyright            : (C) 2013 by Zoran Čučković
-        email                : /
- ***************************************************************************/
-
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
+AntennaIntervisibility
+Boilerplate code
+QGIS plugin
+***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
 
@@ -113,9 +100,6 @@ class AntennaIntervisibility(QObject):
 
 
     def run(self):
-
-        #UBACIVANJE RASTERA I TOCAKA (mora biti ovdje ili se barem pozvati odavde)
-        myLayers = []
         iface = self.iface
         #clear combos        
         self.dlg.ui.cmbRaster.clear();self.dlg.ui.cmbPoints.clear();self.dlg.ui.cmbPointsTarget.clear()

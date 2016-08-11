@@ -2,7 +2,8 @@
 """
 /***************************************************************************
 AntennaIntervisibility
-QGIS plugin
+modified Bresenham Algorithm
+Written By Jakob Hvitnov
 ***************************************************************************/
 """
 
