@@ -95,9 +95,10 @@ def euclidian_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
 
 
-def bresenham_3d_line_of_sight(observers, targets, raster, obs_height_field, tar_height_field, radius, fresnel=True):
+def bresenham_3d_line_of_sight(observers, targets, raster, obs_height_field,
+                               tar_height_field, radius, raster_crs, fresnel=False):
     """Naive bresenham line of sight algorithm"""
-
+    writePoints = []
     lines_for_shp = []
     start, end = 0, 0
 
@@ -114,66 +115,108 @@ def bresenham_3d_line_of_sight(observers, targets, raster, obs_height_field, tar
         observer = observers.GetFeature(obs)
         # get Observer point geometry
         obs_geom = observer.geometry()
-        obs_x, obs_y = obs_geom.GetPoints()[0]
+        try:
+            obs_x = obs_geom.GetPoints()[0][0]
+            obs_y = obs_geom.GetPoints()[0][1]
+        except ValueError:
+            debugHere()
         # offset x,y values to equivalent raster index values
         obs_x_off = int((obs_x - xOrigin) / pixelWidth)
         obs_y_off = int((obs_y - yOrigin) / pixelHeight)
-        radius_pix = radius / pixelWidth
-        mask_x = obs_x_off - radius_pix
-        mask_y = obs_y_off - radius_pix
+        mask_x = obs_x - radius
+        mask_y = obs_y - radius
+        mask_x_pix = int((mask_x - xOrigin) / pixelWidth)
+        mask_y_pix = int((mask_y - yOrigin) / pixelHeight)
+        radius_pix = int(radius / pixelWidth)
         mask_width = radius_pix * 2
         mask_height = radius_pix * 2
-        if mask_x < 0:
-            mask_width = mask_x + mask_width
+        if mask_x_pix < 0: # mask has overflow beyond raster edge
+            mask_width += mask_x_pix # clip mask width by the overflow
+            mask_x_pix = 0 # set mask origin x to edge of raster
             mask_x = xOrigin
-        if mask_y < 0:
-            mask_height = mask_y + mask_height
+        if mask_y_pix < 0:
+            mask_height += mask_y_pix
+            mask_y_pix = 0
             mask_y = yOrigin
-        if int(mask_width) > raster_band.XSize:
-            mask_width = raster_band.XSize
-        if int(mask_height) > raster_band.YSize:
-            mask_height = raster_band.YSize
-        mask_x_pix = int((mask_x - xOrigin) / pixelWidth)
-        mask_y_pix = int((mask_y - yOrigin) / pixelWidth)
+        # truncate positive overflow
+        if mask_width + mask_x_pix > raster_band.XSize:
+            overflow = raster_band.XSize - (mask_width + mask_x_pix)
+            mask_width += overflow
+        if mask_height + mask_y_pix > raster_band.YSize:
+            overflow = raster_band.YSize - (mask_height + mask_y_pix)
+            mask_height += overflow
+        mask_x_pix = int(mask_x_pix)
+        mask_y_pix = int(mask_y_pix)
         mask_width = int(mask_width)
         mask_height = int(mask_height)
+        new_obs_x = obs_x_off - mask_x_pix
+        new_obs_y = mask_y_pix - obs_y_off
 
         # x_geog, y_geog = raster_x_min + x * pix + pix / 2, raster_y_max - y * pix - pix / 2
         # areaOfInterest = QgsRectangle(x_geog - radius, y_geog - radius, x_geog + radius, y_geog + radius)
         # set observer height
-        raster_array = raster_band.ReadAsArray(mask_x_pix, mask_y_pix, mask_width, mask_height).astype(np.float)
+
+        # Raster used is smaller than radius, so no clipping nescesarry
         try:
-            z = observer.items()[obs_height_field] + raster_array[obs_y_off, obs_x_off]
-        except IndexError:
-            print "indexError, line 147"
+            if raster_band.YSize < radius * 2 or raster_band.YSize < radius * 2:
+                mask_x = xOrigin
+                mask_y = yOrigin
+                new_obs_x = obs_x_off
+                new_obs_y = obs_y_off
+                raster_array = raster_band.ReadAsArray().astype(np.float)
+            else:
+                raster_array = raster_band.ReadAsArray(mask_x_pix, mask_y_pix, mask_width, mask_height).astype(np.float)
+        except:
             debugHere()
-        start = (obs_y_off, obs_x_off, z)
+        try:
+            obs_height = observer.items()[obs_height_field]
+            if obs_height is None:
+                obs_height = 1.6 # set observer height to person height
+            z = obs_height + raster_array[new_obs_y, new_obs_x]
+        except(IndexError, TypeError) as e:
+            print e
+            debugHere()
+        start = (new_obs_y, new_obs_x, z)
+
+        writePoints.append([(mask_x, mask_y),
+                       (mask_x, mask_y + (mask_height * pixelHeight)),
+                       (mask_x + (mask_width * pixelWidth) , mask_y),
+                       (mask_x + (mask_width * pixelWidth), mask_y + (mask_height * pixelHeight))])
+
+        # raster_crs
 
         for tar in range(targets.GetFeatureCount()):
+            target_in_radius = True
             target = targets.GetFeature(tar)
             # get Target point geometry
             tar_geom = target.geometry()
             x, y = tar_geom.GetPoints()[0]
 
+            target_outside_radius = euclidian_distance((obs_x, obs_y), (x, y)) > radius
+            if target_outside_radius:
+                continue
             # offset x,y values to equivalent raster index values
             x = int((x - mask_x) / pixelWidth)
             y = int((y - mask_y) / pixelHeight)
 
-            # target_outside_radius = euclidian_distance((obs_x_off, obs_y_off), (x, y)) > radius_pix
 
-            with open('logging.txt', 'w') as f:
-                print(obs, tar, euclidian_distance((obs_x_off, obs_y_off), (x, y)))
+
 
             # check if target point is out of search area
             # if target_outside_radius:
             #    continue
 
-            # set observer height
-            try:
-                z = target.items()[tar_height_field] + raster_array[y, x]
-            except IndexError:
-                debugHere()
+            # get target height
+            z = target.items()[tar_height_field]
 
+            try:
+                landscape_height = raster_array[y, x]
+            except IndexError:
+                target_in_radius = False
+                continue
+
+            # get target height
+            z = target.items()[tar_height_field] + landscape_height
             end = (y, x, z)
 
             # Unpack start/end tuples
@@ -200,7 +243,6 @@ def bresenham_3d_line_of_sight(observers, targets, raster, obs_height_field, tar
             diff_z2 = abs_diff_z * 2
 
             # Find the steepest axis and find line segments accordingly
-            steepest = ''
             if (abs_diff_x >= abs_diff_y) and (abs_diff_x >= abs_diff_z):
                 steepest = 'x'
                 z_line_length = np.sqrt(pow(diff_x, 2) + pow(diff_z, 2))
@@ -225,7 +267,10 @@ def bresenham_3d_line_of_sight(observers, targets, raster, obs_height_field, tar
             mid_fresnel = get_fresnel_radius(z_line_length / 2, z_line_length / 2)
 
             if fresnel:
-                visibility = zm - mid_fresnel > raster_array[xm, ym]
+                try:
+                    visibility = zm - mid_fresnel > raster_array[xm, ym]
+                except:
+                    debugHere()
                 if not visibility:
                     lines_for_shp.append(build_return_package(observer, target, visibility))
                     continue
@@ -319,6 +364,29 @@ def build_return_package(observer, target, visibility):
     # add visibility
     package['visible'] = visibility
     return package
+
+def writeToPolygonFile(inputPoints, filename, crs):
+    pointsList = []
+    for pLine in inputPoints:
+        polygonPoints = []
+        for pt in pLine:
+            x, y = pt
+            polygonPoints.append(QgsPoint(x, y))
+        pointsList.append(polygonPoints)
+
+    fields = QgsFields()
+    outfile = "/home/hvitnov/" + filename
+    writer = QgsVectorFileWriter(outfile + ".shp", "CP1250", fields, QGis.WKBPoint, crs)
+
+    for points in pointsList:
+        feat = QgsFeature()
+        feat.setGeometry(QgsGeometry.fromPolygon([points]))
+        feat.setFields(fields)
+        writer.addFeature(feat)
+        del feat
+
+    del writer
+
 
 def Viewshed (Obs_points_layer, Raster_layer, z_obs, z_target, radius, output,
               output_options,

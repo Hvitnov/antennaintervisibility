@@ -462,6 +462,9 @@
               <property name="checked">
                <bool>false</bool>
               </property>
+              <property name="autoExclusive">
+               <bool>false</bool>
+              </property>
              </widget>
             </item>
            </layout>
@@ -492,22 +495,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QRadioButton" name="chkIntervisibility">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Zoran c version</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QRadioButton" name="chkIntervisibility_2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -532,7 +519,23 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Parallelized Bresenham</string>
+               <string>Parallelized Bresenham (Experimental)</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="chkIntervisibility">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Grass Gis algorithm</string>
               </property>
               <property name="checked">
                <bool>false</bool>
@@ -575,12 +578,17 @@
               </property>
               <item>
                <property name="text">
-                <string>Highest Points in Polygon</string>
+                <string>Intervisibility lines</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>Lowest Points in Polygon</string>
+                <string>Observer Connection index</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Target Connections index</string>
                </property>
               </item>
              </widget>

@@ -139,6 +139,7 @@ class AntennaIntervisibility(QObject):
         # See if OK was pressed
         if result == 1:
             self.timeMeasurements['1 - oktime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+            self.timeMeasurements['1 - oktime_ms'] = time.time()
 
             outpath = AntennaIntervisibilityDialog.get_output_file_path(self.dlg)
             raster_layer_selection = AntennaIntervisibilityDialog.get_selected_raster_layer(self.dlg)
@@ -156,6 +157,7 @@ class AntennaIntervisibility(QObject):
             output_options = AntennaIntervisibilityDialog.get_algorithm_type(self.dlg)
 
             raster_map_layer = QgsMapLayerRegistry.instance().mapLayer(raster_layer_selection)
+            raster_crs = raster_map_layer.crs()
             raster_path = raster_map_layer.dataProvider().dataSourceUri()
             raster = gdal.Open(raster_path)
 
@@ -182,9 +184,9 @@ class AntennaIntervisibility(QObject):
                 return
 
             if self.dlg.ui.chkIntervisibility.isChecked():
-                out_raster = Viewshed(observers_layer_selection, raster_layer_selection, observer_height, target_height, observer_radius,outpath,
-                                  output_options,
-                                  targets_layer_selection, observers_height_field, targets_height_field)
+                out_raster = Viewshed(observers_layer_selection, raster_layer_selection, observer_height,
+                                      target_height, observer_radius,outpath, output_options, targets_layer_selection,
+                                      observers_height_field, targets_height_field)
 
                 for r in out_raster:
                     lyName = os.path.splitext(os.path.basename(r))
@@ -197,14 +199,16 @@ class AntennaIntervisibility(QObject):
 
                     QgsMapLayerRegistry.instance().addMapLayer(layer)
 
-
             elif self.dlg.ui.chkIntervisibility_2.isChecked():
+                fresnel = self.dlg.ui.checkBox_Fresnel.isChecked()
                 bresresult = bresenham_3d_line_of_sight(observers,
                                                         targets,
                                                         raster,
                                                         observers_height_field,
                                                         targets_height_field,
-                                                        observer_radius)
+                                                        observer_radius,
+                                                        raster_crs,
+                                                        fresnel=fresnel)
 
                 # Write line to shapefile
                 shpfile = self.write_lines_layer(outpath, raster_map_layer.crs(), bresresult)
@@ -217,20 +221,12 @@ class AntennaIntervisibility(QObject):
 
 
             self.timeMeasurements['2 - endtime'] = time.strftime('%H:%M:%S', time.localtime(time.time()))
+            self.timeMeasurements['2 - endtime_ms'] = time.time()
+            elapsedTime = self.timeMeasurements['2 - endtime_ms'] - self.timeMeasurements['1 - oktime_ms']
+            self.timeMeasurements['result'] = time.strftime('%H:%M:%S', time.localtime(elapsedTime))
+            self.timeMeasurements['result_ms'] = elapsedTime
             self.printMsg(str(self.timeMeasurements))
             return True
-
-# zoran tb_one_antenna: {'2 - endtime': '20:14:17', '1 - oktime': '20:14:12'}
-# Naive tb_one_antenna: {'2 - endtime': '20:13:03', '1 - oktime': '20:13:00'}
-# smart tb_one_antenna:
-
-# zoran tb: {'2 - endtime': '20:19:28', '1 - oktime': '20:19:06'}
-# Naive tb: {'2 - endtime': '00:51:18', '1 - oktime': '00:51:14'}
-# smart tb:
-
-# zoran samso:
-# Naive samso:
-# smart samso:
 
 
     def write_lines_layer(self, file_name, coordinate_ref_system, data_list):
@@ -252,7 +248,8 @@ class AntennaIntervisibility(QObject):
             feat = QgsFeature()
             feat.setFields(fields)
             # Write point data
-            start_x, start_y = data['observer_coordinates']
+            start_x  = data['observer_coordinates'][0]
+            start_y = data['observer_coordinates'][1]
             end_x, end_y = data['target_coordinates']
             start_point = QgsPoint(start_x, start_y)
             end_point = QgsPoint(end_x, end_y)

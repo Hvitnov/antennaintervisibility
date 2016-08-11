@@ -1,0 +1,122 @@
+_____________________________________________________________
+Tranebjerg one antenna
+zoran tb_one_antenna:
+'2 - endtime_ms': 1466583477.232035,
+'result_ms': 3.3203558921813965,
+'1 - oktime': '10:17:53',
+'2 - endtime': '10:17:57',
+'1 - oktime_ms': 1466583473.911679,
+'result': '01:00:03'}
+
+Naive tb_one_antenna:
+'2 - endtime_ms': 1466583264.258324,
+'result_ms': 1.0489108562469482,
+'1 - oktime': '10:14:23',
+'2 - endtime': '10:14:24',
+'1 - oktime_ms': 1466583263.209413,
+'result': '01:00:01'}
+
+smart tb_one_antenna:
+_____________________________________________________________
+Tranebjerg allpoints
+zoran tb:
+'2 - endtime_ms': 1466583654.684526,
+'result_ms': 14.069742918014526,
+'1 - oktime': '10:20:40',
+'2 - endtime': '10:20:54',
+'1 - oktime_ms': 1466583640.614783,
+'result': '01:00:14'}
+
+
+Naive tb:
+{'2 - endtime_ms': 1466583826.244392,
+'result_ms': 3.7428619861602783,
+'1 - oktime': '10:23:42',
+'2 - endtime': '10:23:46',
+'1 - oktime_ms': 1466583822.50153,
+'result': '01:00:03'}
+
+smart tb:
+
+_____________________________________________________________
+All samso
+zoran samso:
+'2 - endtime_ms': 1466584323.831782,
+'result_ms': 382.3311312198639,
+'1 - oktime': '10:25:41',
+'2 - endtime': '10:32:03',
+'1 - oktime_ms': 1466583941.500651,
+'result': '01:06:22'}
+
+Naive samso: with fresnel
+'2 - endtime_ms': 1466609302.443174,
+'result_ms': 93.83115792274475,
+'1 - oktime': '17:26:48',
+'2 - endtime': '17:28:22',
+'1 - oktime_ms': 1466609208.612016,
+'result': '01:01:33'}
+
+Naive samso: no fresnel
+'2 - endtime_ms': 1466704600.915962,
+'result_ms': 244.13006901741028,
+'1 - oktime': '19:52:36',
+'2 - endtime': '19:56:40',
+'1 - oktime_ms': 1466704356.785893,
+'result': '01:04:04'}
+
+smart samso:
+
+naive
+observers, targets, reselt in seconds
+1, 1155, 3.38
+1, 577, 2.04
+1, 238, 1.67
+1, 119, 0.96
+56, 6755, 225.58
+
+all fresnel
+{'2 - endtime_ms': 1467095896.185418,
+'result_ms': 113.06358885765076,
+'1 - oktime': '08:36:23',
+'2 - endtime': '08:38:16',
+'1 - oktime_ms': 1467095783.121829,
+'result': '01:01:53'}
+
+all no fresnel
+{'2 - endtime_ms': 1467092245.486196,
+'result_ms': 225.5814049243927,
+'1 - oktime': '07:33:39', '2 - endtime': '07:37:25',
+'1 - oktime_ms': 1467092019.904791,
+'result': '01:03:45'}
+
+naive 1 observer 1155 targets
+{'2 - endtime_ms': 1467091537.056456,
+'result_ms': 3.3808062076568604,
+'1 - oktime': '07:25:33',
+'2 - endtime': '07:25:37',
+'1 - oktime_ms': 1467091533.67565,
+'result': '01:00:03'}
+
+naive 1 observer 577 targets
+{'2 - endtime_ms': 1467091635.366324,
+'result_ms': 2.0430970191955566,
+'1 - oktime': '07:27:13', '2 - endtime': '07:27:15',
+'1 - oktime_ms': 1467091633.323227,
+'result': '01:00:02'}
+
+naive 1 observer 238
+{'2 - endtime_ms':
+1467091748.403938,
+'result_ms': 1.657397985458374,
+'1 - oktime': '07:29:06',
+'2 - endtime': '07:29:08',
+'1 - oktime_ms': 1467091746.74654,
+'result': '01:00:01'}
+
+naive 1 observer 119
+{'2 - endtime_ms': 1467091814.560769,
+'result_ms': 0.9669711589813232,
+'1 - oktime': '07:30:13',
+'2 - endtime': '07:30:14',
+'1 - oktime_ms': 1467091813.593798,
+'result': '01:00:00'}
